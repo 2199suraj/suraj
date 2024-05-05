@@ -1,0 +1,453 @@
+Q.uptime.sh
+
+-->
+#!/bin/bash
+
+uptime_file="uptime_data.tsv"
+
+get_uptime(){
+    uptime=$(user/bin/uptime -s)
+
+    echo -e "$(date +_%Y_%m_%d_%H:%M:%S)\t $uptime"
+}
+
+append_to_file(){
+    echo -e "$(get_uptime)" >> "$uptime_file"
+
+}
+
+while true;do
+    append_to_file
+    sleep 300
+done
+------------------------------------------------------------------
+Q.TCP
+
+server.py
+-->
+import socket
+
+# Define server address and port
+SERVER_HOST = '0.0.0.0'
+SERVER_PORT = 5555
+
+# Create a TCP socket
+server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+
+# Bind the socket to the address and port
+server_socket.bind((SERVER_HOST, SERVER_PORT))
+
+# Listen for incoming connections
+server_socket.listen(1)
+print(f"[*] Listening on {SERVER_HOST}:{SERVER_PORT}")
+
+# Accept a client connection
+client_socket, client_address = server_socket.accept()
+print(f"[*] Accepted connection from {client_address[0]}:{client_address[1]}")
+
+# Receive data from client
+data = client_socket.recv(1024)
+print("[*] Received:", data.decode())
+
+# Send a response to client
+client_socket.sendall("Hello from server!".encode())
+
+# Close the connection
+client_socket.close()
+server_socket.close()
+
+
+client.py
+-->
+import socket
+
+# Define server address and port
+SERVER_HOST = '13.233.154.28'
+SERVER_PORT = 5555
+
+# Create a TCP socket
+client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+
+# Connect to the server
+client_socket.connect((SERVER_HOST, SERVER_PORT))
+
+# Send data to server
+client_socket.sendall("Hello from client!".encode())
+
+# Receive response from server
+data = client_socket.recv(1024)
+print("[*] Received from server:", data.decode())
+
+# Close the connection
+client_socket.close()
+
+--------------------------------------------------------------------
+Q.UDP
+-->
+server.py
+-->
+import socket
+
+# Define the server IP address and port number
+SERVER_IP = "0.0.0.0"  # Use 0.0.0.0 to listen on all available network interfaces
+SERVER_PORT = 12345  # Choose a port number (e.g., 12345)
+
+# Create a UDP socket
+server_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+
+# Bind the socket to the server IP address and port
+server_socket.bind((SERVER_IP, SERVER_PORT))
+
+print(f"Server is listening on {SERVER_IP}:{SERVER_PORT}")
+
+# Function to read the latest uptime information from the file
+def read_uptime_data(file_path):
+    try:
+        with open(file_path, 'r') as file:
+            lines = file.readlines()
+            # Get the latest line from the file
+            latest_line = lines[-1].strip()
+            return latest_line
+    except Exception as e:
+        print(f"Error reading file: {e}")
+        return "Error reading file"
+
+# Path to the uptime_data.tsv file
+file_path = "uptime_data.tsv"
+
+# Main loop to handle incoming requests
+while True:
+    # Receive data and client address from the socket
+    data, client_address = server_socket.recvfrom(1024)
+
+    # Read the latest uptime data
+    uptime_data = read_uptime_data(file_path)
+
+    # Send the latest uptime data to the client
+    server_socket.sendto(uptime_data.encode('utf-8'), client_address)
+
+    print(f"Sent uptime data to {client_address}")
+
+
+client.py
+-->
+import socket
+
+SERVER_IP = "your-ec2-instance-ip"  
+SERVER_PORT = 12345 
+
+# Create a UDP socket
+client_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+
+# Send an empty message to request the latest uptime data
+client_socket.sendto(b'', (SERVER_IP, SERVER_PORT))
+
+# Receive the response from the server
+data, server_address = client_socket.recvfrom(1024)
+
+# Decode the data and print the latest uptime information
+uptime_data = data.decode('utf-8')
+print(f"Latest uptime information from server: {uptime_data}")
+
+# Close the socket
+client_socket.close()
+-------------------------------------------------------------------
+
+Q.FTP
+-->
+server
+
+from pyftpdlib.authorizers import DummyAuthorizer
+from pyftpdlib.handlers import FTPHandler
+from pyftpdlib.servers import FTPServer
+
+def start_ftp_server():
+    authorizer = DummyAuthorizer()
+    authorizer.add_user("user", "password", ".", perm="elradfmw")
+
+    handler = FTPHandler
+    handler.authorizer = authorizer
+
+    server = FTPServer(("127.0.0.1", 21), handler)
+    server.serve_forever()
+
+if _name_ == "_main_":
+    start_ftp_server()
+
+client
+
+from ftplib import FTP
+
+def ftp_client():
+    ftp = FTP("127.0.0.1")
+    ftp.login(user="user", passwd="password")
+
+    ftp.cwd("/")  
+
+    
+    files = ftp.nlst()
+    print("Files in the current directory:")
+    for file in files:
+        print(file)
+
+    
+    filename = "uptime.txt"
+    with open(filename, "wb") as file:
+        ftp.retrbinary("RETR " + filename, file.write)
+
+    
+    ftp.quit()
+
+if _name_ == "_main_":
+    ftp_client()
+-------------------------------------------------------------------------
+
+Maven
+------
+
+-->
+create ec2 instance in ubuntu then connect
+
+sudo apt search jdk
+sudo apt install openjdk-11-jdk-y (if not use  - sudo apt update)
+sudo apt install maven -y
+mvn -v
+git clone https://github.com/hkhcoder/vprofile-project.git
+ls
+cd vprofile-project
+ls
+vi pom.xml --(changes <artifacId>javawebapps  <version>V1 replace all this)
+mvn validate
+mvn test
+mvn install
+ls
+cd target
+ls
+
+Created javawebapp-v1 (done)
+
+
+--------------------------------------------------------------------------------------------
+Postgres database
+-->
+
+install docker from link pase 2 links
+
+sudo docker pull postgres:latest
+
+sudo docker run --name some-postgres -e POSTGRES_PASSWORD=mysecretpassword -d postgres
+
+psql -U postgres
+
+CREATE DATABASE MySQL;
+
+/q
+
+sudo docker stop postgres
+
+sudo docker rm postgres
+
+--------------------------------------------------------------------------------------------------
+
+NODE server
+-->
+Commands
+
+git clone <link>
+ls
+cd nodeserver
+vi Dockerfile (write code inside)
+sudo docker build -t nodeserver
+sudo docker run -d -p 3000:3000 nodeserver
+
+browse- ip-address:3000
+hello ,world
+
+
+Dokerfile
+
+# Use an official Node.js runtime as a base image
+FROM node:latest
+
+# Set the working directory in the container
+WORKDIR /usr/src/app
+
+# Copy package.json and package-lock.json files to the working directory
+COPY package*.json ./
+
+# Install application dependencies
+RUN npm install
+
+# Copy the rest of the application code
+COPY . .
+
+# Expose the port the app runs on
+EXPOSE 3000
+
+# Command to run the application
+CMD ["npm", "start"]
+
+
+index.js
+
+const http = require('http');
+
+const server = http.createServer((req, res) => {
+  res.writeHead(200, { 'Content-Type': 'text/plain' });
+  res.end('Hello, World!');
+});
+
+server.listen(3000, '0.0.0.0');
+
+console.log('Server listening on port 3000');
+
+--------------------------------------------------------------------------------
+
+Q.Centos VM Provisioning
+-->
+commands
+
+-open vagrant-vms -create centos folder -open git bash in centos folder
+-vagrant box list
+-vagrant init eurolinux-vagrant/centos-stream-9
+-ls (show vagrantfile)
+-vi vagrantfile
+ edit and uncomment it & write code (public,private,1024,vb.memory,end,last apt)
+-vagrant up
+-vagrant ssh
+-sudo -i
+-ip addr
+- copy ip from 3rs line
+-paste and browse
+-vagrant hault
+-exit
+
+-code to place in vagrant fike
+
+ yum install httpd wget unzip vim -y
+       systemctl start httpd
+       systemctl enabled httpd
+       mkdir -p /tmp/finance
+       cd /tmp/finance
+       wget https://www.tooplate.com/zip-templates/2135_mini_finance.zip
+       unzip -o 2135_mini_finance.zip
+       cp -r 2135_mini_finance/* /var/www/html/
+       systemctl restart httpd
+       cd /tmp/
+       rm -rf /tmp/finance
+--------------------------------------------------------------------------------------
+
+
+Q.Jammy64
+-->
+commands
+
+-open vagrant-vms -create centos folder -open git bash in centos folder
+-vagrant box list
+-vagrant init eurolinux-vagrant/centos-stream-9
+-ls (show vagrantfile)
+-vi vagrantfile
+ edit and uncomment it & write code (public,private,1024,vb.memory,end,last apt)
+-vagrant up
+-vagrant ssh
+-sudo -i
+-ip addr
+- copy ip from 3rs line
+-paste and browse
+-vagrant hault
+-exit
+
+apt-get install apache2 wget unzip  vim -y
+systemctl start apache2
+systemctl enable apache2
+mkdir -p /tmp/finance
+cd /tmp/finance
+
+wget https:tooplate.com/zip-templates/2135_mini_finance.zip
+unzip -o  2135_finance.zip 
+cp -r 2135_mini_finance/* /var/www/html
+systemctl restart apache2
+cd /tmp/
+rm -rf /tmp/finance
+--------------------------------------------------------------------------------------
+Q.MOngo-Express
+-->
+install docker by 2 links 
+vi docker-compose.yml
+sudo docker compose -f docker-compose.yml up
+copy ip and browse ipaddress:8081
+
+ymlfile
+
+version: '3.8'
+
+services:
+  mongo:
+    image: mongo:latest
+    container_name: mongo-container
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: root
+      MONGO_INITDB_ROOT_PASSWORD: example
+    ports:
+      - "27017:27017"
+    networks:
+      - mongo-network
+    volumes:
+      - mongo-data:/data/db
+
+  mongo-express:
+    image: mongo-express:latest
+    container_name: mongo-express-container
+    environment:
+      ME_CONFIG_MONGODB_ADMINUSERNAME: root
+      ME_CONFIG_MONGODB_ADMINPASSWORD: example
+      ME_CONFIG_MONGODB_SERVER: mongo-container
+    ports:
+      - "8081:8081"
+    networks:
+      - mongo-network
+
+networks:
+  mongo-network:
+    driver: bridge
+
+volumes:
+  mongo-data:
+--------------------------------------------------------------------------------
+GIT
+-->
+
+git init
+echo "#TITLE">>README.md
+touch new.txt
+echo "#text">new.txt
+git add .
+git commit -m "addition of h1 ...."
+git remote add origin (copy git link)
+git push origin main/master
+git clone https://github.com/payalbhade16/bhade16.git
+git add.
+git add.
+cd bhade16
+git add .
+git status
+git commit -m
+git commit -m "my first commit" git push origin main
+git checkout -b iss53
+git add 
+git commit -m "modify in iss53"
+git diff main
+git push origin iss53
+git checkout -b hotfix
+git add .
+git commit -m "update txt hotfix branch"
+git push origin hotfix
+git merge main
+git checkout main
+git push -d origin hotfix
+git checkout iss53
+git merge main
+git checkout main
+git push -d origin iss53
+
+
